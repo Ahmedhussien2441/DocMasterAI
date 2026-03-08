@@ -99,9 +99,6 @@ def convert_file():
                 cv.convert(output_filepath)
                 cv.close()
             elif ext == 'docx' and target_format == 'pdf':
-                # Simplified docx to pdf (basic conversion via ReportLab for free usage, 
-                # or better using COM/unoconv if available. We will do a simple text extract 
-                # to ReportLab for lightweight, though formatting may drop)
                 doc = Document(filepath)
                 c = canvas.Canvas(output_filepath, pagesize=letter)
                 y = 750
@@ -109,7 +106,7 @@ def convert_file():
                     if y < 50:
                         c.showPage()
                         y = 750
-                    c.drawString(50, y, para.text[:100]) # truncated for basic layout
+                    c.drawString(50, y, para.text[:100])
                     y -= 20
                 c.save()
             elif ext in ['jpg', 'jpeg', 'png'] and target_format == 'pdf':
@@ -187,14 +184,13 @@ def merge_pdfs():
 @app.route('/pdf-tools/split', methods=['POST'])
 def split_pdf():
     file = request.files['file']
-    range_str = request.form.get('range', '') # e.g. "1-3"
+    range_str = request.form.get('range', '')
     
     if not file or not file.filename.endswith('.pdf'):
         return jsonify({'error': 'Invalid PDF file'}), 400
         
     try:
         start_page, end_page = map(int, range_str.split('-'))
-        # 1-indexed to 0-indexed
         start_page -= 1
         
         reader = PdfReader(file)
@@ -219,7 +215,7 @@ def ocr_process():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
-    lang = request.form.get('lang', 'eng') # eng or ara
+    lang = request.form.get('lang', 'eng')
     
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
@@ -235,14 +231,12 @@ def ocr_process():
     try:
         if ext in ['jpg', 'jpeg', 'png']:
             img = Image.open(filepath)
-            # tesseract needs "ara" for arabic, "eng" for english. Or "eng+ara"
             tesseract_lang = 'eng+ara' if lang == 'ara' else 'eng'
             text = pytesseract.image_to_string(img, lang=tesseract_lang)
         elif ext == 'pdf':
             doc = fitz.open(filepath)
             tesseract_lang = 'eng+ara' if lang == 'ara' else 'eng'
             for page in doc:
-                # Get a high resolution pixmap for OCR
                 pix = page.get_pixmap(dpi=200)
                 mode = "RGBA" if pix.alpha else "RGB"
                 img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
