@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocMaster AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="description" content="Lightweight mobile-friendly document productivity platform.">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: auto;
+        }
+
+        .drop-zone {
+            border: 2px dashed #9ca3af;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        canvas.pdf-preview {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+            margin-top: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-20 overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-file-pdf"></i> DocMaster AI
+            </h1>
+            <button id="install-pwa"
+                class="hidden bg-white text-blue-600 px-3 py-1 rounded-md text-sm font-semibold shadow hover:bg-gray-100 transition">
+                <i class="fa-solid fa-download"></i> Install App
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-4 mt-4">
+
+        <!-- Welcome Section -->
+        <div class="mb-8 text-center tab-content active" id="home-tab">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome to DocMaster AI</h2>
+            <p class="text-gray-500 mb-6">Your lightweight, mobile-first document platform.</p>
+
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <button onclick="switchTab('pdf2word')"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95">
+                    <div class="bg-blue-100 p-4 rounded-full text-blue-600 text-2xl">
+                        <i class="fa-regular fa-file-word"></i>
+                    </div>
+                    <span class="font-semibold">PDF to Word</span>
+                </button>
+                <button onclick="switchTab('convert')"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95">
+                    <div class="bg-blue-100 p-4 rounded-full text-blue-600 text-2xl">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </div>
+                    <span class="font-semibold">Convert Files</span>
+                </button>
+                <button onclick="switchTab('pdf')"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95">
+                    <div class="bg-red-100 p-4 rounded-full text-red-600 text-2xl">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <span class="font-semibold">PDF Tools</span>
+                </button>
+                <button onclick="switchTab('ocr')"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95 z-10">
+                    <div class="bg-green-100 p-4 rounded-full text-green-600 text-2xl">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <span class="font-semibold">Scan & OCR</span>
+                </button>
+                <button onclick="switchTab('ai')"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95">
+                    <div class="bg-purple-100 p-4 rounded-full text-purple-600 text-2xl">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <span class="font-semibold">AI Organizer</span>
+                </button>
+                <button onclick="switchTab('docs'); loadDocuments();"
+                    class="glassmorphism p-6 rounded-xl flex flex-col items-center gap-3 hover:-translate-y-1 transition active:scale-95 col-span-2 lg:col-span-1 border-blue-500 border-2 shadow-lg">
+                    <div class="bg-gray-100 p-4 rounded-full text-gray-600 text-2xl">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <span class="font-semibold">My Documents</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- NEW: PDF TO WORD CONVERTER -->
+        <div id="pdf2word-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-md mx-auto relative">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-regular fa-file-word text-blue-600"></i> PDF to Word Converter
+            </h3>
+            <form id="pdf2word-form" class="space-y-4">
+                <div class="drop-zone border-dashed p-6 rounded-xl text-center cursor-pointer" id="pdf2word-drop">
+                    <div class="text-gray-400 mb-2 text-3xl"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <p class="text-sm font-medium text-gray-700">Drag & Drop PDF here</p>
+                    <p class="text-xs text-gray-400 mb-3">or capture or browse</p>
+                    <input type="file" id="pdf2word-file" class="hidden" accept=".pdf" required>
+                    <button type="button" onclick="document.getElementById('pdf2word-file').click()"
+                        class="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm">Browse
+                        Files</button>
+                </div>
+                <div id="pdf2word-filename" class="text-sm text-center font-medium text-blue-600 truncate mt-2"></div>
+                <!-- PDF Preview -->
+                <canvas id="pdf2word-preview" class="pdf-preview mx-auto"></canvas>
+
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition shadow-md touch-manipulation">Convert
+                    to DOCX</button>
+            </form>
+            <div class="loader mt-6" id="pdf2word-loader"></div>
+            <div id="pdf2word-result" class="mt-4 text-center hidden p-4 bg-green-50 rounded-lg shadow-inner">
+                <a href="#" id="pdf2word-download"
+                    class="text-green-700 font-extrabold flex items-center justify-center gap-2 hover:underline text-lg"
+                    download>
+                    <i class="fa-solid fa-download"></i> Download Word Doc
+                </a>
+            </div>
+        </div>
+
+        <!-- 1. GENERIC CONVERSION -->
+        <div id="convert-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-md mx-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-arrows-rotate text-blue-600"></i> Basic Conversion
+            </h3>
+            <form id="convert-form" class="space-y-4">
+                <div class="drop-zone border-dashed p-6 rounded-xl text-center cursor-pointer" id="convert-drop">
+                    <div class="text-gray-400 mb-2 text-3xl"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <p class="text-sm font-medium text-gray-700">Drag & Drop File here</p>
+                    <input type="file" id="convert-file" class="hidden" accept=".pdf,.docx,.jpg,.jpeg,.png,.txt"
+                        required>
+                    <button type="button" onclick="document.getElementById('convert-file').click()"
+                        class="bg-blue-50 text-blue-600 mt-2 px-4 py-2 rounded-lg text-sm font-bold">Browse
+                        Files</button>
+                </div>
+                <div id="convert-filename" class="text-sm text-center font-medium text-blue-600 truncate mt-2"></div>
+                <canvas id="convert-preview" class="pdf-preview mx-auto"></canvas>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Convert To</label>
+                    <select id="convert-target"
+                        class="block w-full py-2 px-3 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                        required>
+                        <option value="pdf">PDF</option>
+                        <option value="docx">Word (.docx)</option>
+                    </select>
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Convert</button>
+            </form>
+            <div class="loader mt-4" id="convert-loader"></div>
+            <div id="convert-result" class="mt-4 text-center hidden p-4 bg-green-50 rounded-lg">
+                <a href="#" id="convert-download" class="text-green-600 font-bold hover:underline" download>
+                    <i class="fa-solid fa-download"></i> Download Result
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. PDF TOOLS -->
+        <div id="pdf-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-md mx-auto relative">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-file-pdf text-red-600"></i> PDF Tools
+            </h3>
+
+            <div class="space-y-6">
+                <!-- Merge -->
+                <div class="border-b border-gray-200 pb-6">
+                    <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><i
+                            class="fa-solid fa-layer-group"></i> Merge PDFs</h4>
+                    <form id="merge-form" class="space-y-3">
+                        <div class="drop-zone border-dashed p-4 rounded-lg text-center cursor-pointer" id="merge-drop">
+                            <p class="text-sm text-gray-600 mb-2">Drop Multiple PDFs Here</p>
+                            <input type="file" id="merge-files" multiple accept=".pdf" class="hidden" required>
+                            <button type="button" onclick="document.getElementById('merge-files').click()"
+                                class="bg-gray-100 text-gray-700 px-3 py-1 bg-red-50 text-red-600 font-bold rounded text-xs">Browse</button>
+                        </div>
+                        <div id="merge-filenames" class="text-xs text-gray-500 truncate h-4"></div>
+                        <button type="submit"
+                            class="bg-red-500 text-white font-bold px-4 py-3 rounded-lg w-full touch-manipulation hover:bg-red-600 shadow">Merge
+                            All</button>
+                    </form>
+                    <div class="loader mt-3" id="merge-loader"></div>
+                    <div id="merge-result" class="mt-3 text-center hidden">
+                        <a href="#" id="merge-download"
+                            class="text-green-600 font-bold bg-green-50 px-3 py-2 rounded shadow-sm inline-block"
+                            download><i class="fa-solid fa-download"></i> Download Merged</a>
+                    </div>
+                </div>
+
+                <!-- Split -->
+                <div class="pt-2">
+                    <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><i
+                            class="fa-solid fa-scissors"></i> Split / Extract Pages</h4>
+                    <form id="split-form" class="space-y-3">
+                        <div class="drop-zone border-dashed p-4 rounded-lg text-center cursor-pointer" id="split-drop">
+                            <input type="file" id="split-file" accept=".pdf" class="hidden" required>
+                            <button type="button" onclick="document.getElementById('split-file').click()"
+                                class="bg-red-50 text-red-600 font-bold px-3 py-1 rounded text-xs">Browse PDF</button>
+                            <div id="split-filename" class="text-xs text-gray-500 mt-2 truncate h-4"></div>
+                        </div>
+                        <canvas id="split-preview" class="pdf-preview mx-auto w-1/2"></canvas>
+                        <input type="text" id="split-range" placeholder="Pages to extract e.g. 1-3"
+                            class="w-full border-2 border-gray-300 rounded-md p-3 text-sm focus:border-red-500 focus:outline-none"
+                            required>
+                        <button type="submit"
+                            class="bg-red-500 text-white font-bold px-4 py-3 rounded-lg w-full touch-manipulation hover:bg-red-600 shadow">Split
+                            PDF</button>
+                    </form>
+                    <div class="loader mt-3" id="split-loader"></div>
+                    <div id="split-result" class="mt-3 text-center hidden">
+                        <a href="#" id="split-download"
+                            class="text-green-600 font-bold bg-green-50 px-3 py-2 rounded shadow-sm inline-block"
+                            download><i class="fa-solid fa-download"></i> Download Extracted</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. OCR & CAMERA SCANNER -->
+        <div id="ocr-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-md mx-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-camera text-green-600"></i> Scan & OCR
+            </h3>
+
+            <!-- Camera Scanner UI -->
+            <div class="mb-6 p-4 bg-green-50 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
+                <h4 class="font-bold text-gray-700 mb-2 text-sm"><i class="fa-solid fa-mobile-screen"></i> Live Camera
+                    Scanner</h4>
+
+                <div id="camera-container"
+                    class="hidden rounded-lg overflow-hidden bg-black mb-3 border-2 border-green-400">
+                    <video id="camera-feed" class="w-full h-auto object-cover" autoplay playsinline></video>
+                </div>
+                <img id="camera-preview-img" class="w-full h-auto hidden rounded-lg mb-3 shadow" />
+                <canvas id="camera-canvas" class="hidden"></canvas>
+
+                <div class="flex gap-2">
+                    <button type="button" id="start-camera"
+                        class="flex-1 bg-green-600 text-white font-bold px-3 py-3 rounded-lg hover:bg-green-700 text-sm shadow">
+                        <i class="fa-solid fa-camera"></i> Open Camera
+                    </button>
+                    <button type="button" id="capture-camera"
+                        class="hidden flex-1 bg-red-500 text-white font-bold px-3 py-3 rounded-lg hover:bg-red-600 text-sm shadow">
+                        <i class="fa-solid fa-bullseye"></i> Capture
+                    </button>
+                    <button type="button" id="retake-camera"
+                        class="hidden flex-1 bg-gray-500 text-white font-bold px-3 py-3 rounded-lg hover:bg-gray-600 text-sm shadow">
+                        <i class="fa-solid fa-rotate-left"></i> Retake
+                    </button>
+                </div>
+            </div>
+
+            <form id="ocr-form" class="space-y-4">
+                <div class="drop-zone border-dashed p-6 rounded-xl text-center cursor-pointer" id="ocr-drop">
+                    <div class="text-gray-400 mb-2 text-3xl"><i class="fa-regular fa-image"></i></div>
+                    <p class="text-sm font-medium text-gray-700">Drag & Drop Image/PDF</p>
+                    <input type="file" id="ocr-file" accept="image/*,.pdf" class="hidden">
+                    <button type="button" onclick="document.getElementById('ocr-file').click()"
+                        class="bg-green-100 text-green-700 mt-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm">Upload
+                        File</button>
+                </div>
+                <div id="ocr-filename" class="text-sm text-center font-medium text-green-600 truncate mt-2"></div>
+                <!-- PDF Preview -->
+                <canvas id="ocr-preview" class="pdf-preview mx-auto"></canvas>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">OCR Language</label>
+                    <select id="ocr-lang"
+                        class="block w-full py-2 px-3 border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md border"
+                        required>
+                        <option value="eng">English</option>
+                        <option value="ara">Arabic</option>
+                    </select>
+                </div>
+
+                <!-- Hidden input to hold Blob data if camera used -->
+                <input type="hidden" id="camera-blob-data">
+
+                <button type="submit"
+                    class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition shadow touch-manipulation">Run
+                    OCR Extraction</button>
+            </form>
+            <div class="loader mt-4" id="ocr-loader"></div>
+
+            <div id="ocr-result" class="mt-4 hidden p-4 bg-white rounded-lg border shadow-sm">
+                <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><i
+                        class="fa-solid fa-align-left text-blue-500"></i> Extracted Text:</label>
+                <textarea id="ocr-text"
+                    class="w-full h-48 p-3 border rounded-md font-mono text-sm focus:ring-2 focus:ring-green-400 focus:outline-none"
+                    dir="auto"></textarea>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" onclick="copyText('ocr-text')"
+                        class="flex-1 bg-gray-100 py-2 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-200 shadow-sm"><i
+                            class="fa-regular fa-copy"></i> Copy</button>
+                    <button type="button" onclick="sendToAI('ocr-text')"
+                        class="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-purple-200"><i
+                            class="fa-solid fa-wand-sparkles"></i> AI Organize</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. AI TEXT ORGANIZER -->
+        <div id="ai-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-lg mx-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-purple-600"></i> AI Text Organizer
+            </h3>
+
+            <div class="space-y-4">
+                <textarea id="ai-input"
+                    class="w-full h-40 p-4 border-2 border-purple-100 rounded-xl focus:ring-2 focus:ring-purple-400 focus:outline-none shadow-sm"
+                    placeholder="Paste extracted text here..." dir="auto"></textarea>
+
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    <button onclick="processAI('clean')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">Clean
+                        OCR</button>
+                    <button onclick="processAI('grammar')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">Fix
+                        Grammar</button>
+                    <button onclick="processAI('restructure')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">Restructure</button>
+                    <button onclick="processAI('bullets')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">To
+                        Bullets</button>
+                    <button onclick="processAI('summarize')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">Summarize</button>
+                    <button onclick="processAI('highlight')"
+                        class="bg-white border border-purple-200 text-purple-700 py-3 rounded-lg text-sm font-bold hover:bg-purple-50 transition shadow-sm touch-manipulation">Highlight</button>
+                </div>
+
+                <div class="loader mt-4" id="ai-loader"></div>
+
+                <div id="ai-result-container" class="mt-6 hidden border-t-2 border-dashed border-gray-200 pt-6">
+                    <h4 class="font-bold text-gray-700 text-sm mb-3"><i class="fa-solid fa-robot text-purple-500"></i>
+                        AI Output:</h4>
+                    <div id="ai-output"
+                        class="bg-white p-5 rounded-xl border border-gray-200 text-gray-800 whitespace-pre-wrap shadow-inner font-serif text-lg leading-relaxed max-h-96 overflow-y-auto"
+                        dir="auto"></div>
+                    <button type="button" onclick="copyTextDiv('ai-output')"
+                        class="mt-4 w-full bg-purple-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-purple-700"><i
+                            class="fa-regular fa-copy"></i> Copy Output</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. DOCUMENT MANAGER -->
+        <div id="docs-tab" class="tab-content glassmorphism p-6 rounded-xl max-w-2xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open text-gray-600"></i> Cloud Documents
+                </h3>
+                <button onclick="loadDocuments()"
+                    class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-bold shadow-sm hover:bg-gray-200 flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                </button>
+            </div>
+
+            <div id="docs-list" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 pb-4">
+                <!-- Document items populated by JS -->
+            </div>
+
+            <div
+                class="mt-6 p-4 bg-yellow-50 text-xs text-yellow-800 rounded-lg border border-yellow-200 flex items-start gap-2 shadow-sm">
+                <i class="fa-solid fa-circle-info mt-0.5"></i>
+                <p>Files are stored securely. You can download or delete them from this dashboard. Sharing link
+                    capabilities depend on your deployment hosting.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile First) -->
+    <nav
+        class="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around p-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 text-[10px] md:text-xs text-gray-500 font-bold safe-area-pb">
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 text-blue-600 py-1"
+            data-target="home-tab">
+            <i class="fa-solid fa-house text-xl md:text-2xl mb-1"></i> Home
+        </button>
+        <button onclick="switchTab('pdf2word')" class="nav-btn flex flex-col items-center gap-1 py-1"
+            data-target="pdf2word-tab">
+            <i class="fa-regular fa-file-word text-xl md:text-2xl mb-1"></i> PDF to Word
+        </button>
+        <button onclick="switchTab('ocr')" class="nav-btn flex flex-col items-center gap-1 py-1" data-target="ocr-tab">
+            <i class="fa-solid fa-camera text-xl md:text-2xl mb-1"></i> Scan
+        </button>
+        <button onclick="switchTab('docs'); loadDocuments();" class="nav-btn flex flex-col items-center gap-1 py-1"
+            data-target="docs-tab">
+            <i class="fa-solid fa-folder text-xl md:text-2xl mb-1"></i> Docs
+        </button>
+    </nav>
+    <style>
+        .safe-area-pb {
+            padding-bottom: env(safe-area-inset-bottom, 10px);
+        }
+    </style>
+
+    <!-- App Logic Scripts -->
+    <script>
+        // PDF.js configuration
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Update bottom nav active state
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600');
+            });
+            const activeBtn = document.querySelector(`.nav-btn[data-target="${tabName}-tab"]`);
+            if (activeBtn) activeBtn.classList.add('text-blue-600');
+
+            window.scrollTo(0, 0);
+        }
+
+        // --- PWA LOGIC ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker Registered'))
+                .catch(err => console.error('SW Failed', err));
+        }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-pwa');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.classList.add('hidden');
+                deferredPrompt = null;
+            }
+        });
+
+        // --- PDF PREVIEW LOGIC ---
+        async function renderPDFPreview(file, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!file || file.type !== "application/pdf") {
+                canvas.style.display = 'none';
+                return;
+            }
+
+            try {
+                const fileReader = new FileReader();
+                fileReader.onload = async function () {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const page = await pdf.getPage(1);
+
+                    const viewport = page.getViewport({ scale: window.innerWidth < 600 ? 0.6 : 1.0 });
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    canvas.style.display = 'block';
+
+                    const renderContext = { canvasContext: context, viewport: viewport };
+                    await page.render(renderContext).promise;
+                };
+                fileReader.readAsArrayBuffer(file);
+            } catch (e) {
+                console.error("PDF Preview Error:", e);
+                canvas.style.display = 'none';
+            }
+        }
+
+        // --- DRAG AND DROP SETUP ---
+        function setupDropZone(dropId, inputId, labelId, previewCanvasId) {
+            const dropZone = document.getElementById(dropId);
+            const inputElement = document.getElementById(inputId);
+            const labelElement = document.getElementById(labelId);
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt.files && dt.files.length > 0) {
+                    inputElement.files = dt.files;
+                    handleFileUploads(dt.files);
+                }
+            }, false);
+
+            inputElement.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) handleFileUploads(e.target.files);
+            });
+
+            function handleFileUploads(files) {
+                if (files.length === 1) {
+                    labelElement.innerText = files[0].name;
+                    if (previewCanvasId) renderPDFPreview(files[0], previewCanvasId);
+                } else if (files.length > 1) {
+                    labelElement.innerText = `${files.length} files selected`;
+                } else {
+                    labelElement.innerText = "";
+                    if (previewCanvasId) document.getElementById(previewCanvasId).style.display = 'none';
+                }
+            }
+        }
+
+        setupDropZone('pdf2word-drop', 'pdf2word-file', 'pdf2word-filename', 'pdf2word-preview');
+        setupDropZone('convert-drop', 'convert-file', 'convert-filename', 'convert-preview');
+        setupDropZone('split-drop', 'split-file', 'split-filename', 'split-preview');
+        setupDropZone('merge-drop', 'merge-files', 'merge-filenames', null);
+        setupDropZone('ocr-drop', 'ocr-file', 'ocr-filename', 'ocr-preview');
+
+        // --- CAMERA SCANNER (WebRTC) ---
+        const video = document.getElementById('camera-feed');
+        const canvas = document.getElementById('camera-canvas');
+        const previewImg = document.getElementById('camera-preview-img');
+        const startCamBtn = document.getElementById('start-camera');
+        const captureCamBtn = document.getElementById('capture-camera');
+        const retakeCamBtn = document.getElementById('retake-camera');
+        const camContainer = document.getElementById('camera-container');
+        let stream = null;
+
+        startCamBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = stream;
+                camContainer.classList.remove('hidden');
+                startCamBtn.classList.add('hidden');
+                captureCamBtn.classList.remove('hidden');
+                previewImg.classList.add('hidden');
+
+                // clear file input if previously set
+                document.getElementById('ocr-file').value = "";
+                document.getElementById('ocr-filename').innerText = "Live Camera Mode Active";
+                document.getElementById('ocr-preview').style.display = 'none';
+            } catch (err) {
+                alert("Could not access camera. Please explicitly allow permissions or use 'Upload File'. \nError: " + err.message);
+            }
+        });
+
+        captureCamBtn.addEventListener('click', () => {
+            if (video.videoWidth) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                previewImg.src = dataUrl;
+
+                // Convert to blob and store reference for submission
+                canvas.toBlob((blob) => {
+                    const file = new File([blob], "camera_scanned.jpg", { type: "image/jpeg" });
+
+                    // Create a mock DataTransfer to place into file input (modern browsers)
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        document.getElementById('ocr-file').files = dt.files;
+                        document.getElementById('ocr-filename').innerText = "camera_scanned.jpg (Ready)";
+                    } catch (e) {
+                        // Fallback mechanism via custom global state if DataTransfer fails
+                    }
+                }, 'image/jpeg');
+
+                camContainer.classList.add('hidden');
+                previewImg.classList.remove('hidden');
+                captureCamBtn.classList.add('hidden');
+                retakeCamBtn.classList.remove('hidden');
+
+                // Stop tracks
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        retakeCamBtn.addEventListener('click', () => {
+            retakeCamBtn.classList.add('hidden');
+            previewImg.classList.add('hidden');
+            document.getElementById('ocr-filename').innerText = "";
+            document.getElementById('ocr-file').value = "";
+            startCamBtn.click();
+        });
+
+
+        // --- FORM SUBMISSION ENDPOINTS ---
+
+        // 0. PDF to Word logic
+        document.getElementById('pdf2word-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('pdf2word-file').files[0];
+            if (!file) return alert("Select a PDF first.");
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('pdf2word-loader').style.display = 'block';
+            document.getElementById('pdf2word-result').classList.add('hidden');
+
+            try {
+                const res = await fetch('/pdf_to_word', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const downloadLinks = document.getElementById('pdf2word-download');
+                    downloadLinks.href = data.url;
+                    downloadLinks.download = data.filename;
+                    document.getElementById('pdf2word-result').classList.remove('hidden');
+
+                    // Cleanup Preview
+                    document.getElementById('pdf2word-file').value = "";
+                    document.getElementById('pdf2word-filename').innerText = "";
+                    document.getElementById('pdf2word-preview').style.display = 'none';
+                    loadDocuments(); // refresh background stats
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred. Check backend logs.');
+            } finally {
+                document.getElementById('pdf2word-loader').style.display = 'none';
+            }
+        });
+
+        // 1. Convert logic
+        document.getElementById('convert-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('convert-file').files[0];
+            if (!file) return alert("Select a file");
+            const target = document.getElementById('convert-target').value;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('target', target);
+
+            document.getElementById('convert-loader').style.display = 'block';
+            document.getElementById('convert-result').classList.add('hidden');
+
+            try {
+                const res = await fetch('/convert', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const a = document.getElementById('convert-download');
+                    a.href = data.url;
+                    a.download = data.filename;
+                    document.getElementById('convert-result').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred');
+            } finally {
+                document.getElementById('convert-loader').style.display = 'none';
+            }
+        });
+
+        // 2a. Merge PDFs
+        document.getElementById('merge-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const files = document.getElementById('merge-files').files;
+            if (files.length < 2) return alert("Select at least 2 PDFs!");
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            document.getElementById('merge-loader').style.display = 'block';
+            document.getElementById('merge-result').classList.add('hidden');
+
+            try {
+                const res = await fetch('/pdf-tools/merge', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const a = document.getElementById('merge-download');
+                    a.href = data.url;
+                    a.download = data.filename;
+                    document.getElementById('merge-result').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred');
+            } finally {
+                document.getElementById('merge-loader').style.display = 'none';
+            }
+        });
+
+        // 2b. Split PDFs
+        document.getElementById('split-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('split-file').files[0];
+            const range = document.getElementById('split-range').value;
+            if (!file) return alert("Select PDF First");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('range', range);
+
+            document.getElementById('split-loader').style.display = 'block';
+            document.getElementById('split-result').classList.add('hidden');
+
+            try {
+                const res = await fetch('/pdf-tools/split', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    const a = document.getElementById('split-download');
+                    a.href = data.url;
+                    a.download = data.filename;
+                    document.getElementById('split-result').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred');
+            } finally {
+                document.getElementById('split-loader').style.display = 'none';
+            }
+        });
+
+        // 3. OCR SCANNER logic
+        document.getElementById('ocr-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('ocr-file').files[0];
+            if (!file) return alert("Please capture an image or upload a file first!");
+            const lang = document.getElementById('ocr-lang').value;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('lang', lang);
+
+            document.getElementById('ocr-loader').style.display = 'block';
+            document.getElementById('ocr-result').classList.add('hidden');
+
+            try {
+                const res = await fetch('/ocr', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('ocr-text').value = data.text;
+                    document.getElementById('ocr-result').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred');
+            } finally {
+                document.getElementById('ocr-loader').style.display = 'none';
+            }
+        });
+
+        // Utilities
+        function copyText(elemId) {
+            const copyText = document.getElementById(elemId);
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Copied to clipboard!");
+        }
+
+        function copyTextDiv(elemId) {
+            const text = document.getElementById(elemId).innerText;
+            navigator.clipboard.writeText(text);
+            alert("Copied to clipboard!");
+        }
+
+        function sendToAI(elemId) {
+            const text = document.getElementById(elemId).value;
+            document.getElementById('ai-input').value = text;
+            setTimeout(() => switchTab('ai'), 100);
+        }
+
+        // 4. AI Logic
+        async function processAI(action) {
+            const text = document.getElementById('ai-input').value;
+            if (!text.trim()) {
+                alert("Please paste or type text first!");
+                return;
+            }
+
+            document.getElementById('ai-loader').style.display = 'block';
+            document.getElementById('ai-result-container').classList.add('hidden');
+
+            try {
+                const res = await fetch('/ai-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, action })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Very simple markdown-like processing for output
+                    let out = data.result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    out = out.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                    document.getElementById('ai-output').innerHTML = out;
+                    document.getElementById('ai-result-container').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                alert('An error occurred');
+            } finally {
+                document.getElementById('ai-loader').style.display = 'none';
+            }
+        }
+
+        // 5. Document Manager Logic
+        async function loadDocuments() {
+            const listContainer = document.getElementById('docs-list');
+            listContainer.innerHTML = '<div class="text-center text-gray-500 py-6"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>';
+
+            try {
+                const res = await fetch('/documents');
+                const data = await res.json();
+
+                if (data.documents && data.documents.length > 0) {
+                    listContainer.innerHTML = '';
+
+                    // Sort descending by name (simplistic chronological since name has timestamp)
+                    data.documents.sort((a, b) => b.name.localeCompare(a.name));
+
+                    data.documents.forEach(doc => {
+                        const sizeKB = (doc.size / 1024).toFixed(1);
+
+                        // Icon mapping
+                        let iconClass = "fa-file";
+                        if (doc.name.endsWith('.pdf')) iconClass = "fa-file-pdf text-red-500 bg-red-50";
+                        else if (doc.name.endsWith('.docx')) iconClass = "fa-file-word text-blue-500 bg-blue-50";
+                        else if (doc.name.endsWith('.txt')) iconClass = "fa-file-lines text-gray-500 bg-gray-50";
+                        else if (doc.name.match(/\.(jpg|jpeg|png)$/i)) iconClass = "fa-image text-green-500 bg-green-50";
+
+                        const el = document.createElement('div');
+                        el.className = 'flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition';
+                        el.innerHTML = `
+                            <div class="flex items-center gap-4 overflow-hidden">
+                                <div class="p-3 rounded-full ${iconClass.split(' ').slice(1).join(' ')}">
+                                    <i class="fa-solid ${iconClass.split(' ')[0]} text-xl"></i>
+                                </div>
+                                <div class="truncate">
+                                    <p class="font-bold text-sm text-gray-800 truncate mb-1" title="${doc.name}">${doc.name.substring(15)}</p>
+                                    <div class="flex gap-2 text-[11px] font-bold text-gray-400">
+                                        <span class="bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wider">${doc.category}</span>
+                                        <span>${sizeKB} KB</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 shrink-0 border-l pl-3 ml-2">
+                                <a href="${doc.url}" download class="text-blue-500 hover:bg-blue-100 p-2 rounded-full transition"><i class="fa-solid fa-download"></i></a>
+                                <button onclick="deleteDoc('${doc.delete_url}')" class="text-red-500 hover:bg-red-100 p-2 rounded-full transition"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        `;
+                        listContainer.appendChild(el);
+                    });
+                } else {
+                    listContainer.innerHTML = '<div class="text-center bg-gray-50 p-6 rounded-xl text-gray-400 font-medium border border-dashed"><p class="mb-2 text-2xl"><i class="fa-regular fa-folder-open"></i></p><p>No documents found.</p></div>';
+                }
+            } catch (e) {
+                listContainer.innerHTML = '<div class="text-center text-red-500 py-4 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Failed to connect.</div>';
+            }
+        }
+
+        async function deleteDoc(url) {
+            if (!confirm("Are you sure you want to completely delete this file?")) return;
+            try {
+                const res = await fetch(url, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadDocuments();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (e) {
+                alert('An error occurred during deletion');
+            }
+        }
+    </script>
+</body>
+
+</html>

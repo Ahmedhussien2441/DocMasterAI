@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+uploads/
+converted/
+ocr/
+exports/
+venv/
+.env
+test_*.py
+test_*.pdf
+tesseract-setup.exe
